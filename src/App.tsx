@@ -1,26 +1,53 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import "./App.css";
+import { MapContainer, Marker, TileLayer } from "react-leaflet";
+import { useEffect, useState } from "react";
+import { Session } from "./model/Session";
+import SessionPopup from "./SessionPopup";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    const [data, setData] = useState<Session[]>();
+
+    useEffect(() => {
+        fetch("https://wueww.github.io/fahrplan-2022/sessions.json").then(async (res) => {
+            const json = await res.json();
+            setData(json.sessions);
+        });
+    }, [setData]);
+
+    if (!data) {
+        return <>Daten werden geladen ...</>;
+    }
+
+    return (
+        <MapContainer center={{ lng: 9.9602, lat: 49.7879 }} zoom={14} style={{ width: "100%", height: "100%" }}>
+            <TileLayer
+                attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | Made by Rolf, <a href="impressum.html">Impressum</a>.'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {Object.values(
+                data
+                    .filter((session) => !session.cancelled)
+                    .filter((session) => session.location && session.location.lat && session.location.lng)
+                    .reduce(
+                        (acc, session) => {
+                            const key = [session.location!.lat, session.location!.lng].join("#");
+                            return { ...acc, [key]: [...(acc[key] || []), session] };
+                        },
+                        {} as { [key: string]: Session[] },
+                    ),
+            ).map((partitionedSessions: Session[]) => (
+                <Marker
+                    key={partitionedSessions[0].id}
+                    position={{
+                        lng: partitionedSessions[0].location!.lng!,
+                        lat: partitionedSessions[0].location!.lat!,
+                    }}
+                >
+                    <SessionPopup sessions={partitionedSessions} />
+                </Marker>
+            ))}
+        </MapContainer>
+    );
 }
 
 export default App;
