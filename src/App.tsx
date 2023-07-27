@@ -30,14 +30,7 @@ function App() {
                     .filter((session) => session.location && session.location.lat && session.location.lng)
                     .reduce(
                         (acc, session) => {
-                            if (session.location?.lat === undefined || session.location?.lng === undefined) {
-                                throw new Error("unreachable");
-                            }
-
-                            const key = [
-                                Math.round(session.location.lat * 1000),
-                                Math.round(session.location.lng * 1000),
-                            ].join("#");
+                            const key = [session.location!.lat, session.location!.lng].join("#");
                             return { ...acc, [key]: [...(acc[key] || []), session] };
                         },
                         {} as { [key: string]: Session[] },
