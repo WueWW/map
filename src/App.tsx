@@ -1,8 +1,16 @@
 import "./App.css";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Session } from "./model/Session";
 import SessionPopup from "./SessionPopup";
+
+interface SessionGroup {
+    sessions: Session[];
+    latSum: number;
+    lngSum: number;
+}
+
+const snapThres = 0.00025;
 
 function App() {
     const [data, setData] = useState<Session[]>();
@@ -14,7 +22,36 @@ function App() {
         });
     }, [setData]);
 
-    if (!data) {
+    const groups = useMemo(() => {
+        return data
+            ?.filter((session) => !session.cancelled)
+            .reduce((groups: SessionGroup[], session: Session): SessionGroup[] => {
+                const { lat, lng } = session.location ?? {};
+                if (!lat || !lng) return groups;
+
+                const matchingGroup = groups.find(
+                    (group) =>
+                        Math.abs(group.latSum / group.sessions.length - lat) < snapThres &&
+                        Math.abs(group.lngSum / group.sessions.length - lng) < snapThres,
+                );
+
+                if (matchingGroup) {
+                    matchingGroup.sessions.push(session);
+                    matchingGroup.latSum += lat;
+                    matchingGroup.lngSum += lng;
+                } else {
+                    groups.push({
+                        sessions: [session],
+                        latSum: lat,
+                        lngSum: lng,
+                    });
+                }
+
+                return groups;
+            }, []);
+    }, [data]);
+
+    if (!groups) {
         return <>Daten werden geladen ...</>;
     }
 
@@ -24,26 +61,15 @@ function App() {
                 attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors | Made by Rolf, <a href="impressum.html">Impressum</a>.'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {Object.values(
-                data
-                    .filter((session) => !session.cancelled)
-                    .filter((session) => session.location && session.location.lat && session.location.lng)
-                    .reduce(
-                        (acc, session) => {
-                            const key = [session.location!.lat, session.location!.lng].join("#");
-                            return { ...acc, [key]: [...(acc[key] || []), session] };
-                        },
-                        {} as { [key: string]: Session[] },
-                    ),
-            ).map((partitionedSessions: Session[]) => (
+            {groups.map((group) => (
                 <Marker
-                    key={partitionedSessions[0].id}
+                    key={group.sessions[0].id}
                     position={{
-                        lng: partitionedSessions[0].location!.lng!,
-                        lat: partitionedSessions[0].location!.lat!,
+                        lng: group.lngSum / group.sessions.length,
+                        lat: group.latSum / group.sessions.length,
                     }}
                 >
-                    <SessionPopup sessions={partitionedSessions} />
+                    <SessionPopup sessions={group.sessions} />
                 </Marker>
             ))}
         </MapContainer>
