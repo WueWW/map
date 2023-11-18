@@ -1,7 +1,7 @@
 {
-    "name": "@wueww/wueww-map",
-    "version": "0.2.0",
-    "homepage": "http://stesie.github.io/wueww-map",
+    "name": "@wueww/map",
+    "version": "0.2.1",
+    "homepage": "https://wueww-map.vercel.app/",
     "private": true,
     "dependencies": {
         "@testing-library/jest-dom": "^5.17.0",
