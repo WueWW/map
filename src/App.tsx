@@ -26,14 +26,22 @@ function App() {
         return data
             ?.filter((session) => !session.cancelled)
             .reduce((groups: SessionGroup[], session: Session): SessionGroup[] => {
-                const { lat, lng } = session.location ?? {};
+                let { lat, lng } = session.location ?? {};
                 if (!lat || !lng) return groups;
 
-                const matchingGroup = groups.find(
-                    (group) =>
+                lat %= 180;
+                lng %= 180;
+
+                const matchingGroup = groups.find((group) => {
+                    if (lat === undefined || lng === undefined) {
+                        throw new Error("unreachable, lat/lng cannot be undefined here");
+                    }
+
+                    return (
                         Math.abs(group.latSum / group.sessions.length - lat) < snapThres &&
-                        Math.abs(group.lngSum / group.sessions.length - lng) < snapThres,
-                );
+                        Math.abs(group.lngSum / group.sessions.length - lng) < snapThres
+                    );
+                });
 
                 if (matchingGroup) {
                     matchingGroup.sessions.push(session);
