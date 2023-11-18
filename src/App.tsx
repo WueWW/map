@@ -16,7 +16,7 @@ function App() {
     const [data, setData] = useState<Session[]>();
 
     useEffect(() => {
-        fetch("https://wueww.github.io/fahrplan-2022/sessions.json").then(async (res) => {
+        fetch("https://backend.timetable.wueww.de/export/session.json").then(async (res) => {
             const json = await res.json();
             setData(json.sessions);
         });
